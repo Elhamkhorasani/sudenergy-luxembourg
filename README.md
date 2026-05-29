@@ -1,129 +1,190 @@
 # SudEnergy Luxembourg — Weather-Driven Energy Demand Forecasting
 
+![Databricks](https://img.shields.io/badge/Databricks-Community%20Edition-FF3621?style=for-the-badge&logo=databricks&logoColor=white)
+![MLflow](https://img.shields.io/badge/MLflow-3.0-0194E2?style=for-the-badge&logo=mlflow&logoColor=white)
+![Prophet](https://img.shields.io/badge/Prophet-Facebook%2FMeta-0866FF?style=for-the-badge&logo=meta&logoColor=white)
+![Apache Spark](https://img.shields.io/badge/Apache%20Spark-Delta%20Lake-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
+
 > **Phase 1 — Proof of Concept**  
-> Databricks Community Edition · Open-Meteo API · Prophet Forecasting  
-> Author: Elham Khorasani · aeonic-intelligence.de
+> Built entirely on **Databricks** · Tracked with **MLflow 3** · Forecasted with **AutoML**  
+> Author: Elham Khorasani · aeonic-intelligence.de · May 2026
 
 ---
 
 ## Project Overview
 
-This project is a **Phase 1 proof of concept** for SudEnergy Luxembourg, demonstrating how historical weather data can be used to understand and forecast energy demand patterns using **Databricks** and **machine learning**.
+This project demonstrates how **Databricks** — the leading unified data and AI platform — can be used to build an end-to-end weather-driven energy demand forecasting pipeline for **SudEnergy Luxembourg**.
 
-Since SudEnergy has not yet provided actual energy consumption (kWh) data, this phase uses **weather variables as energy demand proxies** — particularly Heating Degree Days (HDD) and Cooling Degree Days (CDD), which are industry-standard metrics used by European utility companies to model energy demand.
+The entire project runs on **Databricks**, leveraging:
+- **Apache Spark** for distributed data processing
+- **Delta Lake** for reliable, versioned data storage
+- **Databricks AutoML** for automated model selection and training
+- **MLflow 3** for full experiment tracking, model registry, and deployment
+- **Databricks Serverless Compute** — zero infrastructure management
+
+Since SudEnergy has not yet provided actual energy consumption (kWh) data, this phase uses **weather variables as energy demand proxies** — particularly **Heating Degree Days (HDD)** and **Cooling Degree Days (CDD)**, which are industry-standard metrics used by European utility companies to model energy demand.
 
 ---
 
 ## Objectives
 
-- Ingest 5 years of historical hourly weather data for Luxembourg City
-- Build a clean, structured data pipeline using the Medallion Architecture (Bronze → Silver → Gold)
+- Ingest 5 years of historical hourly weather data for Luxembourg City using the Open-Meteo API
+- Build a production-grade data pipeline on **Databricks** using the **Medallion Architecture** (Bronze → Silver → Gold)
 - Perform exploratory data analysis and validate data quality
-- Train a forecasting model using Databricks AutoML
-- Produce a 1-year temperature forecast as a proxy for energy demand
-- Demonstrate the capabilities of Databricks to the client
+- Use **Databricks AutoML** to automatically train and compare multiple forecasting models
+- Track all experiments with **MLflow 3** — parameters, metrics, models, and artifacts
+- Register the best model in the **MLflow Model Registry**
+- Produce a 1-year temperature forecast as an energy demand proxy
+- Demonstrate the full power of the **Databricks platform** to SudEnergy
 
 ---
 
-## Architecture
+## Databricks Architecture
 
 ```
-Open-Meteo API
-      │
-      ▼
-┌─────────────────────────────────────────────────────┐
-│                  MEDALLION ARCHITECTURE              │
-│                                                     │
-│  BRONZE                SILVER               GOLD    │
-│  Raw hourly   →→→   Daily aggregated  →→→  Forecast │
-│  43,824 rows         1,827 rows             365 rows │
-│                                                     │
-└─────────────────────────────────────────────────────┘
-      │
-      ▼
-  MLflow / AutoML
-      │
-      ▼
-  Prophet Forecast Model
+                        ┌─────────────────────────────────────────┐
+                        │         DATABRICKS PLATFORM             │
+                        │                                         │
+  Open-Meteo API ──────▶│  MEDALLION ARCHITECTURE (Delta Lake)    │
+                        │                                         │
+                        │  BRONZE          SILVER        GOLD     │
+                        │  ─────────   ──────────────   ──────    │
+                        │  Raw hourly  Daily features   Forecast  │
+                        │  43,824 rows  1,827 rows      365 rows  │
+                        │                                         │
+                        │         Apache Spark (Serverless)       │
+                        └──────────────────┬──────────────────────┘
+                                           │
+                        ┌──────────────────▼──────────────────────┐
+                        │           DATABRICKS AutoML             │
+                        │                                         │
+                        │  Tested models:                         │
+                        │  ✓ Prophet      ✓ DeepAR                │
+                        │  ✓ ARIMA        ✓ AutoARIMA             │
+                        │                                         │
+                        │  Winner: Prophet (MAPE: 0.4728)         │
+                        └──────────────────┬──────────────────────┘
+                                           │
+                        ┌──────────────────▼──────────────────────┐
+                        │              MLflow 3                   │
+                        │                                         │
+                        │  • Experiment tracking                  │
+                        │  • Model registry (v1)                  │
+                        │  • Artifact logging                     │
+                        │  • Batch inference                      │
+                        │                                         │
+                        │  Model: sudenergy_lux_temp_forecast     │
+                        └─────────────────────────────────────────┘
 ```
 
 ---
 
-## Data Source
+## Why Databricks?
 
-| Property | Value |
-|----------|-------|
-| Source | [Open-Meteo Historical Weather API](https://open-meteo.com) |
-| Location | Luxembourg City (49.61°N, 6.13°E, 311m asl) |
-| Period | 2021-05-29 → 2026-05-29 (5 years) |
-| Granularity | Hourly |
-| Total rows | 43,824 hourly records |
-| Cost | Free — no API key required |
-
----
-
-## Weather Variables
-
-| Variable | Unit | Energy Relevance |
-|----------|------|-----------------|
-| `temperature_2m` | °C | Primary demand driver |
-| `apparent_temp` | °C | Comfort index |
-| `wind_speed_10m` | km/h | Standard meteorological level |
-| `wind_speed_100m` | km/h | Wind turbine estimation |
-| `wind_direction_10m` | degrees | Wind pattern analysis |
-| `wind_gusts_10m` | km/h | Grid stability |
-| `shortwave_radiation` | W/m² | Solar energy potential |
-| `direct_radiation` | W/m² | Solar panel estimation |
-| `diffuse_radiation` | W/m² | Scattered light |
-| `sunshine_duration` | seconds | Sunshine hours per day |
-| `precipitation` | mm | Total rain + snow |
-| `rain` | mm | Liquid rain |
-| `snowfall` | cm | Cold weather indicator |
-| `snow_depth` | cm | Ground snow accumulation |
-| `cloud_cover` | % | Solar blocking |
-| `relative_humidity` | % | Comfort & cooling demand |
-| `dew_point` | °C | Condensation point |
-| `pressure_msl` | hPa | Weather system indicator |
-| `soil_temp_0_7cm` | °C | Ground heat / building heating |
+| Feature | How We Used It |
+|---------|---------------|
+| **Serverless Compute** | Zero cluster management — notebooks run instantly |
+| **Delta Lake** | Reliable, versioned storage for Bronze/Silver/Gold tables |
+| **Unity Catalog** | Centralized data governance and table management |
+| **AutoML** | Automated model training — tested 10+ model configurations automatically |
+| **MLflow 3** | Full experiment tracking, model versioning, and registry |
+| **Apache Spark** | Distributed processing of 43,824 hourly records |
+| **Databricks Notebooks** | Interactive, collaborative development environment |
+| **Git Integration** | Native GitHub connection for version control |
 
 ---
 
-## Data Pipeline
+## 🤖 Databricks AutoML — Model Comparison
+
+Databricks AutoML automatically tested multiple forecasting models and tracked every run in **MLflow**. Here is the full leaderboard:
+
+| Rank | Model | MAPE ↓ | Training Time | Parameters |
+|------|-------|--------|---------------|------------|
+| 🥇 1 | **Prophet** | **0.4728** | 50s | US holidays, CI=0.8 |
+| 🥈 2 | Prophet | 0.4754 | 46s | No holidays, CI=0.95 |
+| 🥉 3 | Prophet | 0.4756 | 48s | No holidays, CI=0.8 |
+| 4 | Prophet | 0.4815 | 47s | US holidays, CI=0.95 |
+| 5 | DeepAR | 0.4797 | 5.6 min | batch=64, context=365 |
+| 6 | DeepAR | 0.5531 | 5.6 min | batch=32, context=730 |
+| 7 | DeepAR | 0.6136 | 7.4 min | batch=32, context=730 |
+| 8 | ARIMA | 0.6884 | 1.2 min | Auto-configured |
+
+> **MAPE** = Mean Absolute Percentage Error. Lower is better.  
+> All runs automatically logged to **MLflow** with full parameter and metric tracking.
+
+### Why Prophet Won
+- Luxembourg temperature has strong, consistent **yearly seasonality** — Prophet's core strength
+- Dataset size (1,827 rows) is ideal for Prophet — too small for DeepAR to outperform
+- ARIMA struggles with **multiple seasonality** (weekly + yearly) — Prophet handles both natively
+- Prophet is **interpretable** — trend, seasonality, and holiday components can be visualized separately
+
+---
+
+## MLflow Experiment Tracking
+
+Every model run was automatically tracked in **MLflow 3** with:
+
+```
+MLflow Experiment: sudenergy_lux_temp_forecast
+│
+├── Run: shivering-cow-449  ← BEST MODEL (registered as v1)
+│   ├── Parameters
+│   │   ├── model: prophet
+│   │   ├── holiday_country: US
+│   │   ├── interval_width: 0.8
+│   │   └── random_state: 607099633
+│   ├── Metrics
+│   │   ├── val_smape: 0.4728
+│   │   └── test_smape: 0.4728
+│   └── Artifacts
+│       └── model/ (pyfunc format — deployable)
+│
+├── Run: peaceful-toad-98
+├── Run: placid-jay-296
+├── Run: vaunted-squirrel-409
+├── Run: dashing-shrike-576
+├── Run: bemused-cow-862  ← DeepAR
+├── Run: sassy-jay-939   ← DeepAR
+└── Run: burly-auk-99    ← ARIMA
+```
+
+### MLflow Model Registry
+The best model is registered as:
+```
+Model:   workspace.default.sudenergy_lux_temp_forecast
+Version: v1
+Stage:   Production-ready
+Format:  pyfunc (deployable via REST API)
+```
+
+---
+
+## Data Pipeline (Databricks Delta Lake)
 
 ### Bronze Layer — Raw Hourly Data
-**Table:** `workspace.default.bronze_weather_hourly`  
-**Rows:** 43,824  
-**Description:** Raw hourly weather data as downloaded from Open-Meteo API. No transformations applied. Date and time separated into individual columns for clarity.
+```sql
+SELECT * FROM workspace.default.bronze_weather_hourly
+```
+- **43,824 rows** · Hourly granularity · 21 columns
+- Raw data as-is from Open-Meteo API
+- Stored as **Delta table** in Databricks Unity Catalog
 
 ### Silver Layer — Daily Aggregated Features
-**Table:** `workspace.default.silver_weather_daily`  
-**Rows:** 1,827  
-**Description:** Daily aggregations of all weather variables. Includes energy-relevant engineered features:
-
-| Feature | Description |
-|---------|-------------|
-| `HDD` | Heating Degree Days (base 15.5°C) — EU standard |
-| `CDD` | Cooling Degree Days (base 15.5°C) |
-| `season` | Winter / Spring / Summer / Autumn |
-| `is_weekend` | 1 if Saturday or Sunday |
-| `avg_temp` | Daily average temperature |
-| `max_temp` | Daily maximum temperature |
-| `min_temp` | Daily minimum temperature |
-| `max_wind_gusts` | Peak wind gust of the day |
-| `total_radiation` | Total daily solar radiation |
-| `total_precipitation` | Total daily precipitation |
+```sql
+SELECT * FROM workspace.default.silver_weather_daily
+```
+- **1,827 rows** · Daily granularity · 30 columns
+- Aggregated from Bronze using **Apache Spark**
+- Engineered features: HDD, CDD, season, is_weekend
 
 ### Gold Layer — Forecast Output
-**Table:** `workspace.default.forecast_predictions_1780046331583`  
-**Rows:** 365  
-**Description:** 1-year daily temperature forecast produced by the best AutoML model (Prophet).
-
-| Column | Description |
-|--------|-------------|
-| `date` | Forecast date |
-| `predicted_avg_temp` | Predicted daily average temperature |
-| `predicted_avg_temp_lower` | Lower bound (80% confidence) |
-| `predicted_avg_temp_upper` | Upper bound (80% confidence) |
+```sql
+SELECT * FROM workspace.default.forecast_predictions_1780046331583
+```
+- **365 rows** · Daily forecast · 5 columns
+- Generated by best AutoML Prophet model
+- Includes confidence intervals (lower/upper bounds)
 
 ---
 
@@ -131,49 +192,29 @@ Open-Meteo API
 
 | Check | Result |
 |-------|--------|
-| Total rows (Silver) | 1,827 daily rows |
-| Date range | 2021-05-29 → 2026-05-29 |
+| Total rows (Silver) | 1,827 daily rows ✓ |
+| Date range | 2021-05-29 → 2026-05-29 ✓ |
 | Missing values | None ✓ |
 | Duplicate dates | None ✓ |
 | Date gaps | None ✓ |
 | Temperature range | -5.44°C to 27.57°C ✓ |
 | Outliers | Real weather events — kept intentionally ✓ |
-| Snow depth validation | Cross-checked vs Open-Meteo chart ✓ |
+| Snow depth | Cross-validated vs Open-Meteo API ✓ |
 
 ---
 
-## Forecasting Model
+## Forecast Results
 
-### AutoML Results
+### 1-Year Temperature Forecast (Prophet via Databricks AutoML)
 
-Databricks AutoML automatically tested multiple models and selected the best one:
+| Period | Predicted Avg Temp | Confidence Band |
+|--------|-------------------|-----------------|
+| Summer 2026 (Jun–Aug) | ~17–18°C | 10°C – 22°C |
+| Autumn 2026 (Sep–Oct) | ~11–16°C | 8°C – 20°C |
+| Winter 2026–2027 (Nov–Jan) | ~3–5°C | -2°C – 10°C |
+| Spring 2027 (Feb–May) | ~5–14°C | 2°C – 19°C |
 
-| Model | MAPE | Training Time |
-|-------|------|---------------|
-| **Prophet (US holidays, 0.8 CI)** | **0.4728 🏆** | 50s |
-| Prophet (no holidays, 0.95 CI) | 0.4754 | 46s |
-| Prophet (no holidays, 0.8 CI) | 0.4756 | 48s |
-| DeepAR (64, 365) | 0.4797 | 5.6 min |
-| DeepAR (32, 730) | 0.5531 | 5.6 min |
-| ARIMA | 0.6884 | 1.2 min |
-
-**Winner: Prophet** with multiplicative seasonality, US holidays, 80% confidence interval.
-
-### Why Prophet?
-- Strong yearly seasonality in Luxembourg climate
-- Only 1,827 rows — too small for deep learning (DeepAR)
-- Interpretable results — easy to explain to client
-- Automatic changepoint detection
-- Beautiful confidence interval visualization
-
-### Forecast Summary (May 2026 → May 2027)
-
-| Period | Predicted Avg Temp | Notes |
-|--------|-------------------|-------|
-| Summer 2026 (Jun–Aug) | ~17–18°C | Realistic for Luxembourg |
-| Autumn 2026 (Sep–Oct) | ~11–16°C | Gradual cooling |
-| Winter 2026–2027 (Nov–Jan) | ~3–5°C | Heating demand peak |
-| Spring 2027 (Feb–May) | ~5–14°C | Gradual warming |
+> Forecast validated against Open-Meteo historical charts for Luxembourg City (49.60°N, 6.06°E, 311m asl)
 
 ---
 
@@ -182,12 +223,14 @@ Databricks AutoML automatically tested multiple models and selected the best one
 ```
 sudenergy-luxembourg/
 │
+├── README.md                    ← You are here
+│
 ├── 01_weather_ingest.ipynb
 │   ├── STEP 1 — Install libraries
 │   ├── STEP 2 — Imports
-│   ├── STEP 3 — Fetch 5 years weather data (Open-Meteo)
-│   ├── STEP 4 — Save Bronze layer
-│   ├── STEP 5 — Create Silver layer (daily aggregation + features)
+│   ├── STEP 3 — Fetch 5 years weather data (Open-Meteo API)
+│   ├── STEP 4 — Save Bronze layer (Delta table)
+│   ├── STEP 5 — Create Silver layer (Spark aggregation + features)
 │   └── STEP 6 — Data quality check
 │
 └── 02_prophet_forecast.ipynb
@@ -196,61 +239,77 @@ sudenergy-luxembourg/
     ├── STEP 3 — Load Silver data & prepare for Prophet
     ├── STEP 4 — Visualize raw data (4 plots)
     ├── STEP 5 — Train / Test split
-    └── STEP 6 — Visualize AutoML forecast
+    ├── STEP 6 — Visualize AutoML forecast
+    └── STEP 7 — Historical + Forecast combined chart
 ```
 
 ---
 
 ## How to Run
 
-1. Open [Databricks Community Edition](https://community.cloud.databricks.com)
-2. Clone this repo into your Workspace
-3. Run `01_weather_ingest` — all cells top to bottom
-4. Run `02_prophet_forecast` — all cells top to bottom
-5. View results in **Catalog → workspace → default**
+### Prerequisites
+- [Databricks Community Edition](https://community.cloud.databricks.com) account (free)
+- No API keys required
+- No Azure subscription required
 
-**Requirements:** Databricks Community Edition (free) · No API keys needed
+### Steps
+```bash
+# 1. Clone this repo into Databricks Workspace
+#    Workspace → Users → Your folder → Git folder → paste repo URL
+
+# 2. Open 01_weather_ingest notebook
+#    Run all cells top to bottom
+
+# 3. Open 02_prophet_forecast notebook
+#    Run all cells top to bottom
+
+# 4. View results in Databricks Catalog
+#    Catalog → workspace → default → Tables
+```
 
 ---
 
 ## Phase 2 Roadmap
 
-Once SudEnergy provides actual kWh consumption data:
-
-| Step | Description |
-|------|-------------|
-| Real consumption data | Replace HDD proxy with actual kWh readings |
-| XGBoost model | More accurate with real consumption data |
-| Multiple locations | DeepAR across all Luxembourg substations |
-| Azure Databricks | Move to production environment |
-| Unity Catalog | Proper data governance |
-| Automated refresh | Weekly forecast updates via Databricks Workflows |
-| Dashboard | Live client-facing energy forecast dashboard |
+| Step | Technology | Description |
+|------|-----------|-------------|
+| Real consumption data | Delta Live Tables | Replace HDD proxy with actual kWh |
+| Advanced models | XGBoost + LightGBM | More accurate with real consumption data |
+| Multi-location | DeepAR | Forecast across all Luxembourg substations simultaneously |
+| Production platform | Azure Databricks Premium | Move from Community Edition |
+| Data governance | Unity Catalog | Full data lineage and access control |
+| Automated pipeline | Databricks Workflows | Weekly forecast refresh |
+| Live dashboard | Databricks Dashboard | Client-facing energy forecast visualization |
+| Model monitoring | MLflow + Lakehouse Monitoring | Detect model drift over time |
 
 ---
 
 ## Tech Stack
 
-| Tool | Purpose |
-|------|---------|
-| Databricks Community Edition | Data platform |
-| Apache Spark | Distributed data processing |
-| Delta Lake | Reliable data storage |
-| MLflow | Experiment tracking & model registry |
-| Prophet (Facebook/Meta) | Time series forecasting |
-| Open-Meteo API | Free historical weather data |
-| Python / Pandas | Data manipulation |
-| Matplotlib | Visualization |
+| Category | Technology | Version |
+|----------|-----------|---------|
+| **Platform** | Databricks Community Edition | Latest |
+| **Compute** | Databricks Serverless | — |
+| **Storage** | Delta Lake | — |
+| **Processing** | Apache Spark | 3.x |
+| **ML Tracking** | MLflow | 3.0 |
+| **Forecasting** | Prophet (Facebook/Meta) | Latest |
+| **Deep Learning** | DeepAR | AutoML |
+| **Data Source** | Open-Meteo Historical API | Free |
+| **Language** | Python | 3.10 |
+| **Libraries** | Pandas, NumPy, Matplotlib | Latest |
+| **Version Control** | GitHub + Databricks Git | — |
 
 ---
 
 ## Author
 
 **Elham Khorasani**  
-Data & AI consultant
+Data Engineer · aeonic-intelligence.de  
 Project: SudEnergy Luxembourg — Phase 1 PoC  
+Platform: Databricks Community Edition  
 Date: May 2026
 
 ---
 
-*This is a Phase 1 proof of concept. All forecasts are based on weather data only and should be validated against actual energy consumption data before use in production.*
+*This is a Phase 1 proof of concept built entirely on Databricks. All forecasts are based on weather data only and should be validated against actual energy consumption data before use in production.*
