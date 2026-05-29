@@ -305,7 +305,7 @@ sudenergy-luxembourg/
 ## Author
 
 **Elham Khorasani**  
-Data Engineer · aeonic-intelligence.de  
+Data & AI Consultant · aeonic-intelligence.de  
 Project: SudEnergy Luxembourg — Phase 1 PoC  
 Platform: Databricks Community Edition  
 Date: May 2026
