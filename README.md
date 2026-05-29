@@ -1,4 +1,4 @@
-# SudEnergy Luxembourg — Weather-Driven Energy Demand Forecasting
+# Luxembourg — Weather-Driven Energy Demand Forecasting
 
 ![Databricks](https://img.shields.io/badge/Databricks-Community%20Edition-FF3621?style=for-the-badge&logo=databricks&logoColor=white)
 ![MLflow](https://img.shields.io/badge/MLflow-3.0-0194E2?style=for-the-badge&logo=mlflow&logoColor=white)
